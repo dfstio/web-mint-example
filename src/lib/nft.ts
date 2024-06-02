@@ -3,7 +3,8 @@
 import { calculateSHA512 } from "./sha512";
 import { pinFile } from "./ipfs";
 import type { blockchain, MintParams } from "minanft";
-import { Signature } from "o1js";
+import { serializeTransaction } from "./transaction";
+import { sendTransaction } from "./send";
 
 export async function getAccount(): Promise<string | undefined> {
   const accounts = await (window as any)?.mina?.requestAccounts();
@@ -73,6 +74,8 @@ export async function mintNFT(params: {
     wallet,
     fetchMinaAccount,
     api,
+    serializeFields,
+    MintParams,
   } = await import("minanft");
   const contractAddress = MINANFT_NAME_SERVICE_V2;
   console.log("contractAddress", contractAddress);
@@ -188,6 +191,7 @@ export async function mintNFT(params: {
     2
   );
   console.log("json", json);
+  /*
   console.time("compiled");
   const verificationKey = (await NFTContractV2.compile()).verificationKey;
   if (verificationKey.hash.toBigInt() !== VERIFICATION_KEY_V2.hash.toBigInt()) {
@@ -205,6 +209,7 @@ export async function mintNFT(params: {
     return;
   }
   console.timeEnd("compiled");
+  */
 
   const zkAppAddress = PublicKey.fromBase58(MINANFT_NAME_SERVICE_V2);
   const zkApp = new NameContractV2(zkAppAddress);
@@ -232,6 +237,7 @@ export async function mintNFT(params: {
   });
 
   tx.sign([nftPrivateKey]);
+  const serializedTransaction = serializeTransaction(tx);
   const transaction = tx.toJSON();
   console.log("Transaction", transaction);
   const payload = {
@@ -242,7 +248,7 @@ export async function mintNFT(params: {
       memo: memo,
     },
   };
-  console.log("Payload", payload);
+  //console.log("Payload", payload);
   const txResult = await (window as any).mina?.sendTransaction(payload);
   console.log("Transaction result", txResult);
   const signedData = txResult?.signedData;
@@ -250,6 +256,15 @@ export async function mintNFT(params: {
     console.log("No signed data");
     return undefined;
   }
+
+  const sentTx = await sendTransaction({
+    serializedTransaction,
+    signedData,
+    mintParams: serializeFields(MintParams.toFields(mintParams)),
+    contractAddress,
+  });
+  console.log("Sent transaction", sentTx);
+  /*
   const signedJson = JSON.parse(signedData);
   console.log("Signed JSON", signedJson);
   console.log("Signed JSON 1", {
@@ -272,4 +287,5 @@ export async function mintNFT(params: {
   console.timeEnd("proved");
   const txSent = await tx.send();
   console.log("Transaction sent", { hash: txSent.hash, txSent });
+  */
 }
