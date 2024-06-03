@@ -32,6 +32,7 @@ export async function mintNFT(params: {
   developer: string;
   repo: string;
 }) {
+  console.time("ready to sign");
   const { name, image, price, collection, description, keys, developer, repo } =
     params;
 
@@ -51,6 +52,22 @@ export async function mintNFT(params: {
     return;
   }
 
+  const chain: blockchain = "devnet";
+
+  const ipfsPromise = pinFile({
+    file: image,
+    keyvalues: {
+      name,
+      owner,
+      contractAddress:
+        "B62qm5wKfuQxJaFtaA5PYrYebri9kniwhefpiMdmn4dm4R6DjquxNFT",
+      chain,
+      developer,
+      repo,
+    },
+  });
+
+  console.time("imported o1js");
   const {
     Field,
     PrivateKey,
@@ -60,16 +77,15 @@ export async function mintNFT(params: {
     AccountUpdate,
     Signature,
   } = await import("o1js");
+  console.timeEnd("imported o1js");
+  console.time("imported minanft");
   const {
     MinaNFT,
-    NFTContractV2,
     NameContractV2,
     RollupNFT,
-    MinaNFTNameServiceV2,
     FileData,
     initBlockchain,
     MINANFT_NAME_SERVICE_V2,
-    VERIFICATION_KEY_HASH_V2,
     VERIFICATION_KEY_V2,
     wallet,
     fetchMinaAccount,
@@ -77,19 +93,15 @@ export async function mintNFT(params: {
     serializeFields,
     MintParams,
   } = await import("minanft");
+  console.timeEnd("imported minanft");
+  console.time("prepared data");
   const contractAddress = MINANFT_NAME_SERVICE_V2;
   console.log("contractAddress", contractAddress);
-  const chain: blockchain = "devnet";
+
   const nftPrivateKey = PrivateKey.random();
   const address = nftPrivateKey.toPublicKey();
   const net = await initBlockchain(chain);
   const sender = PublicKey.fromBase58(owner);
-
-  const nft = new RollupNFT({
-    name,
-    address,
-    external_url: net.network.explorerAccountUrl + address.toBase58(),
-  });
   const pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT!;
   const arweaveKey = undefined;
   const jwt = process.env.NEXT_PUBLIC_MINANFT_JWT!;
@@ -98,7 +110,7 @@ export async function mintNFT(params: {
     return;
   }
   const minanft = new api(jwt);
-  const reserved = await minanft.reserveName({
+  const reservedPromise = minanft.reserveName({
     name,
     publicKey: owner,
     chain: "devnet",
@@ -107,27 +119,14 @@ export async function mintNFT(params: {
     developer: "DFST",
     repo: "web-mint-example",
   });
-  console.log("Reserved", reserved);
-  if (
-    reserved === undefined ||
-    reserved.isReserved !== true ||
-    reserved.signature === undefined ||
-    reserved.signature === "" ||
-    reserved.price === undefined ||
-    (reserved.price as any)?.price === undefined
-  ) {
-    console.error("Name is not reserved");
-    return {
-      success: false,
-      error: "Name is not reserved",
-      reason: reserved.reason,
-    };
-  }
-  const signature = Signature.fromBase58(reserved.signature);
-  if (signature === undefined) {
-    console.error("Signature is undefined");
-    return;
-  }
+
+  const nft = new RollupNFT({
+    name,
+    address,
+    external_url: net.network.explorerAccountUrl + address.toBase58(),
+  });
+
+  console.timeEnd("prepared data");
 
   if (pinataJWT === undefined) {
     console.error("pinataJWT is undefined");
@@ -150,21 +149,42 @@ export async function mintNFT(params: {
 
   nft.update({ key: "rarity", value: "70%" });
 
-  const ipfs = await pinFile({
-    file: image,
-    keyvalues: {
-      name,
-      owner,
-      contractAddress,
-      chain,
-      developer,
-      repo,
-    },
-  });
-
-  console.log("image ipfs", ipfs);
+  console.time("calculated sha3_512");
   const sha3_512 = await calculateSHA512(image);
+  console.timeEnd("calculated sha3_512");
   console.log("image sha3_512", sha3_512);
+
+  console.time("reserved name");
+  const reserved = await reservedPromise;
+  console.timeEnd("reserved name");
+
+  console.log("Reserved", reserved);
+  if (
+    reserved === undefined ||
+    reserved.isReserved !== true ||
+    reserved.signature === undefined ||
+    reserved.signature === "" ||
+    reserved.price === undefined ||
+    (reserved.price as any)?.price === undefined
+  ) {
+    console.error("Name is not reserved");
+    return {
+      success: false,
+      error: "Name is not reserved",
+      reason: reserved.reason,
+    };
+  }
+
+  const signature = Signature.fromBase58(reserved.signature);
+  if (signature === undefined) {
+    console.error("Signature is undefined");
+    return;
+  }
+
+  console.time("uploaded image");
+  const ipfs = await ipfsPromise;
+  console.timeEnd("uploaded image");
+  console.log("image ipfs", ipfs);
 
   const imageData = new FileData({
     fileRoot: Field(0),
@@ -176,10 +196,20 @@ export async function mintNFT(params: {
     storage: `i:${ipfs}`,
   });
 
-  console.log("imageData", imageData);
   nft.updateFileData({ key: `image`, type: "image", data: imageData });
 
-  await nft.prepareCommitData({ pinataJWT });
+  const commitPromise = nft.prepareCommitData({ pinataJWT });
+
+  const zkAppAddress = PublicKey.fromBase58(MINANFT_NAME_SERVICE_V2);
+  const zkApp = new NameContractV2(zkAppAddress);
+  const fee = Number((await MinaNFT.fee()).toBigInt());
+  const memo = "mint";
+  await fetchMinaAccount({ publicKey: sender });
+  await fetchMinaAccount({ publicKey: zkAppAddress });
+  console.time("prepared commit data");
+  await commitPromise;
+  console.timeEnd("prepared commit data");
+  console.time("prepared tx");
 
   if (nft.storage === undefined) throw new Error("Storage is undefined");
   if (nft.metadataRoot === undefined) throw new Error("Metadata is undefined");
@@ -191,28 +221,6 @@ export async function mintNFT(params: {
     2
   );
   console.log("json", json);
-  /*
-  console.time("compiled");
-  const verificationKey = (await NFTContractV2.compile()).verificationKey;
-  if (verificationKey.hash.toBigInt() !== VERIFICATION_KEY_V2.hash.toBigInt()) {
-    console.error(
-      "Verification key mismatch",
-      verificationKey,
-      VERIFICATION_KEY_V2
-    );
-    return;
-  }
-  const nameVK = (await NameContractV2.compile()).verificationKey;
-  console.log("Name verification key", nameVK.hash.toJSON());
-  if (nameVK.hash.toJSON() !== VERIFICATION_KEY_HASH_V2) {
-    console.error("Name verification key mismatch", nameVK.hash.toJSON());
-    return;
-  }
-  console.timeEnd("compiled");
-  */
-
-  const zkAppAddress = PublicKey.fromBase58(MINANFT_NAME_SERVICE_V2);
-  const zkApp = new NameContractV2(zkAppAddress);
   const mintParams: MintParams = {
     name: MinaNFT.stringToField(nft.name!),
     address,
@@ -226,11 +234,6 @@ export async function mintNFT(params: {
       storage: nft.storage!,
     },
   };
-
-  const fee = Number((await MinaNFT.fee()).toBigInt());
-  const memo = "mint";
-  await fetchMinaAccount({ publicKey: sender });
-  await fetchMinaAccount({ publicKey: zkAppAddress });
   const tx = await Mina.transaction({ sender, fee, memo }, async () => {
     AccountUpdate.fundNewAccount(sender!);
     await zkApp.mint(mintParams);
@@ -239,7 +242,7 @@ export async function mintNFT(params: {
   tx.sign([nftPrivateKey]);
   const serializedTransaction = serializeTransaction(tx);
   const transaction = tx.toJSON();
-  console.log("Transaction", transaction);
+  console.log("Transaction", tx.toPretty());
   const payload = {
     transaction,
     onlySign: true,
@@ -248,9 +251,11 @@ export async function mintNFT(params: {
       memo: memo,
     },
   };
-  //console.log("Payload", payload);
+  console.timeEnd("prepared tx");
+  console.timeEnd("ready to sign");
   const txResult = await (window as any).mina?.sendTransaction(payload);
   console.log("Transaction result", txResult);
+  console.time("sent transaction");
   const signedData = txResult?.signedData;
   if (signedData === undefined) {
     console.log("No signed data");
@@ -263,29 +268,6 @@ export async function mintNFT(params: {
     mintParams: serializeFields(MintParams.toFields(mintParams)),
     contractAddress,
   });
+  console.timeEnd("sent transaction");
   console.log("Sent transaction", sentTx);
-  /*
-  const signedJson = JSON.parse(signedData);
-  console.log("Signed JSON", signedJson);
-  console.log("Signed JSON 1", {
-    a1: signedJson.zkappCommand.feePayer.authorization,
-    a2: signedJson.zkappCommand.accountUpdates[0].authorization.signature,
-    a3: signedJson.zkappCommand.accountUpdates[2].authorization.signature,
-    a4: signedJson.zkappCommand.accountUpdates[3].authorization.signature,
-  });
-  tx.transaction.feePayer.authorization =
-    signedJson.zkappCommand.feePayer.authorization;
-  tx.transaction.accountUpdates[0].authorization.signature =
-    signedJson.zkappCommand.accountUpdates[0].authorization.signature;
-  tx.transaction.accountUpdates[2].authorization.signature =
-    signedJson.zkappCommand.accountUpdates[2].authorization.signature;
-  tx.transaction.accountUpdates[3].authorization.signature =
-    signedJson.zkappCommand.accountUpdates[3].authorization.signature;
-
-  console.time("proved");
-  await tx.prove();
-  console.timeEnd("proved");
-  const txSent = await tx.send();
-  console.log("Transaction sent", { hash: txSent.hash, txSent });
-  */
 }
