@@ -52,6 +52,12 @@ export async function mintNFT(params: {
     return;
   }
 
+  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  if (contractAddress === undefined) {
+    console.error("Contract address is undefined");
+    return;
+  }
+
   const chain: blockchain = "devnet";
 
   const ipfsPromise = pinFile({
@@ -59,8 +65,7 @@ export async function mintNFT(params: {
     keyvalues: {
       name,
       owner,
-      contractAddress:
-        "B62qm5wKfuQxJaFtaA5PYrYebri9kniwhefpiMdmn4dm4R6DjquxNFT",
+      contractAddress,
       chain,
       developer,
       repo,
@@ -95,7 +100,13 @@ export async function mintNFT(params: {
   } = await import("minanft");
   console.timeEnd("imported minanft");
   console.time("prepared data");
-  const contractAddress = MINANFT_NAME_SERVICE_V2;
+  if (contractAddress !== MINANFT_NAME_SERVICE_V2) {
+    console.error(
+      "Contract address is not the same as MINANFT_NAME_SERVICE_V2"
+    );
+    return;
+  }
+
   console.log("contractAddress", contractAddress);
 
   const nftPrivateKey = PrivateKey.random();
