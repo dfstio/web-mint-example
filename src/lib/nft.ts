@@ -5,6 +5,7 @@ import { pinFile } from "./ipfs";
 import type { blockchain, MintParams } from "minanft";
 import { serializeTransaction } from "./transaction";
 import { sendTransaction } from "./send";
+import { VerificationKey } from "o1js";
 
 export async function getAccount(): Promise<string | undefined> {
   const accounts = await (window as any)?.mina?.requestAccounts();
@@ -91,7 +92,7 @@ export async function mintNFT(params: {
     FileData,
     initBlockchain,
     MINANFT_NAME_SERVICE_V2,
-    VERIFICATION_KEY_V2,
+    VERIFICATION_KEY_V2_JSON,
     wallet,
     fetchMinaAccount,
     api,
@@ -232,13 +233,18 @@ export async function mintNFT(params: {
     2
   );
   console.log("json", json);
+
+  const verificationKey: VerificationKey = {
+    hash: Field.fromJSON(VERIFICATION_KEY_V2_JSON.devnet.hash),
+    data: VERIFICATION_KEY_V2_JSON.devnet.data,
+  };
   const mintParams: MintParams = {
     name: MinaNFT.stringToField(nft.name!),
     address,
     price: UInt64.from(BigInt(price * 1e9)),
     fee: UInt64.from(BigInt((reserved.price as any)?.price * 1_000_000_000)),
     feeMaster: wallet,
-    verificationKey: VERIFICATION_KEY_V2,
+    verificationKey,
     signature,
     metadataParams: {
       metadata: nft.metadataRoot,
