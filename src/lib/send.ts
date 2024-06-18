@@ -86,9 +86,14 @@ export async function sendTransaction(params: {
   } else return { isSent: true, hash: result };
 }
 
-export async function sendSimpleMintCommand(
-  params: SimpleMintNFT
-): Promise<{ isSent: boolean; hash: string }> {
+export async function prepareTransaction(params: SimpleMintNFT): Promise<{
+  isPrepared: boolean;
+  transaction?: string;
+  fee?: number;
+  memo?: string;
+  serializedTransaction?: string;
+  mintParams?: string;
+}> {
   const { contractAddress } = params;
   console.log("sendSimpleMintCommand", params);
 
@@ -97,12 +102,11 @@ export async function sendSimpleMintCommand(
   });
 
   const transaction = JSON.stringify(params, null, 2);
-  return { isSent: true, hash: "test" };
 
   let answer = await zkCloudWorkerRequest({
     command: "execute",
     transactions: [transaction],
-    task: "simpleMint",
+    task: "prepare",
     args,
     metadata: `mint`,
     mode: "async",
@@ -123,10 +127,10 @@ export async function sendSimpleMintCommand(
     if (result !== undefined) console.log(`jobResult result:`, result);
   }
   if (answer.jobStatus === "failed") {
-    return { isSent: false, hash: result };
+    return { isPrepared: false };
   } else if (result === undefined) {
-    return { isSent: false, hash: "job error" };
-  } else return { isSent: true, hash: result };
+    return { isPrepared: false };
+  } else return { isPrepared: true, ...JSON.parse(result) };
 }
 
 async function zkCloudWorkerRequest(params: any) {
