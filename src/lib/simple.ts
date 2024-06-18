@@ -6,7 +6,8 @@ import {
   SimpleImageData,
   SimpleMintNFT,
   ProofOfNFT,
-  sendSimpleMintCommand,
+  prepareTransaction,
+  sendTransaction,
 } from "./send";
 
 export async function getAccount(): Promise<string | undefined> {
@@ -95,5 +96,51 @@ export async function simpleMintNFT(params: {
     keys,
   } as SimpleMintNFT;
 
-  const result = await sendSimpleMintCommand(nftData);
+  const {
+    isPrepared,
+    transaction,
+    fee,
+    memo,
+    serializedTransaction,
+    mintParams,
+  } = await prepareTransaction(nftData);
+  if (
+    !isPrepared ||
+    transaction === undefined ||
+    fee === undefined ||
+    memo === undefined ||
+    serializedTransaction === undefined ||
+    mintParams === undefined
+  ) {
+    console.error("Failed to prepare transaction");
+    return;
+  }
+
+  const payload = {
+    transaction,
+    onlySign: true,
+    feePayer: {
+      fee: fee,
+      memo: memo,
+    },
+  };
+  console.timeEnd("prepared tx");
+  console.timeEnd("ready to sign");
+  const txResult = await (window as any).mina?.sendTransaction(payload);
+  console.log("Transaction result", txResult);
+  console.time("sent transaction");
+  const signedData = txResult?.signedData;
+  if (signedData === undefined) {
+    console.log("No signed data");
+    return undefined;
+  }
+
+  const sentTx = await sendTransaction({
+    serializedTransaction,
+    signedData,
+    mintParams,
+    contractAddress,
+  });
+  console.timeEnd("sent transaction");
+  console.log("Sent transaction", sentTx);
 }
