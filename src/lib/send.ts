@@ -2,6 +2,31 @@
 
 import axios from "axios";
 
+export interface ProofOfNFT {
+  key: string;
+  value: string;
+  isPublic: boolean;
+}
+
+export interface SimpleImageData {
+  filename: string;
+  size: number;
+  mimeType: string;
+  sha3_512: string;
+  storage: string;
+}
+export interface SimpleMintNFT {
+  contractAddress: string;
+  chain: string;
+  name: string;
+  description: string;
+  collection: string;
+  price: number;
+  owner: string;
+  image: SimpleImageData;
+  keys: ProofOfNFT[];
+}
+
 export async function sendTransaction(params: {
   serializedTransaction: string;
   signedData: string;
@@ -35,6 +60,49 @@ export async function sendTransaction(params: {
     command: "execute",
     transactions: [transaction],
     task: "mint",
+    args,
+    metadata: `mint`,
+    mode: "async",
+  });
+
+  console.log(`zkCloudWorker answer:`, answer);
+  const jobId = answer.jobId;
+  console.log(`jobId:`, jobId);
+  let result;
+  while (result === undefined && answer.jobStatus !== "failed") {
+    await sleep(5000);
+    answer = await zkCloudWorkerRequest({
+      command: "jobResult",
+      jobId,
+    });
+    console.log(`jobResult api call result:`, answer);
+    result = answer.result;
+    if (result !== undefined) console.log(`jobResult result:`, result);
+  }
+  if (answer.jobStatus === "failed") {
+    return { isSent: false, hash: result };
+  } else if (result === undefined) {
+    return { isSent: false, hash: "job error" };
+  } else return { isSent: true, hash: result };
+}
+
+export async function sendSimpleMintCommand(
+  params: SimpleMintNFT
+): Promise<{ isSent: boolean; hash: string }> {
+  const { contractAddress } = params;
+  console.log("sendSimpleMintCommand", params);
+
+  let args = JSON.stringify({
+    contractAddress,
+  });
+
+  const transaction = JSON.stringify(params, null, 2);
+  return { isSent: true, hash: "test" };
+
+  let answer = await zkCloudWorkerRequest({
+    command: "execute",
+    transactions: [transaction],
+    task: "simpleMint",
     args,
     metadata: `mint`,
     mode: "async",
