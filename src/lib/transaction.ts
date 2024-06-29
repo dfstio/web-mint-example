@@ -1,7 +1,7 @@
-import type { Mina } from "o1js";
+//import type { Mina } from "o1js";
 
 export function serializeTransaction(
-  tx: Mina.Transaction<false, false>
+  tx: any //Mina.Transaction<false, false>
 ): string {
   const length = tx.transaction.accountUpdates.length;
   let i;

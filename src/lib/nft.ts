@@ -5,7 +5,6 @@ import { pinFile } from "./ipfs";
 import type { blockchain, MintParams } from "minanft";
 import { serializeTransaction } from "./transaction";
 import { sendTransaction } from "./send";
-import { UInt32, VerificationKey } from "o1js";
 
 export async function getAccount(): Promise<string | undefined> {
   const accounts = await (window as any)?.mina?.requestAccounts();
@@ -82,6 +81,8 @@ export async function mintNFT(params: {
     Mina,
     AccountUpdate,
     Signature,
+    UInt32,
+    VerificationKey,
   } = await import("o1js");
   console.timeEnd("imported o1js");
   console.time("imported minanft");
