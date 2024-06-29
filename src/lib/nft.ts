@@ -3,6 +3,7 @@
 import { calculateSHA512 } from "./sha512";
 import { pinFile } from "./ipfs";
 import type { blockchain, MintParams } from "minanft";
+import type { VerificationKey } from "o1js";
 import { serializeTransaction } from "./transaction";
 import { sendTransaction } from "./send";
 
