@@ -25,13 +25,13 @@ const nextConfig = {
   },
 
   webpack(config, { buildId, dev, isServer, defaultLoaders, webpack }) {
-    if (isServer === false) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        o1js: path.resolve(__dirname, "node_modules/o1js/dist/web/index.js"),
-      };
-      config.optimization.minimizer = [];
-    }
+    //if (isServer === false) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      o1js: path.resolve(__dirname, "node_modules/o1js/dist/web/index.js"),
+    };
+    config.optimization.minimizer = [];
+    //}
     return config;
   },
 
