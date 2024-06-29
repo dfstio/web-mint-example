@@ -259,7 +259,6 @@ export async function mintNFT(params: {
     },
   };
   const tx = await Mina.transaction({ sender, fee, memo }, async () => {
-    AccountUpdate.fundNewAccount(sender!);
     await zkApp.mint(mintParams);
   });
 
@@ -291,6 +290,7 @@ export async function mintNFT(params: {
     signedData,
     mintParams: serializeFields(MintParams.toFields(mintParams)),
     contractAddress,
+    name,
   });
   console.timeEnd("sent transaction");
   console.log("Sent transaction", sentTx);
