@@ -5,7 +5,7 @@ import { pinFile } from "./ipfs";
 import type { blockchain, MintParams } from "minanft";
 import { serializeTransaction } from "./transaction";
 import { sendTransaction } from "./send";
-import { VerificationKey } from "o1js";
+import { UInt32, VerificationKey } from "o1js";
 
 export async function getAccount(): Promise<string | undefined> {
   const accounts = await (window as any)?.mina?.requestAccounts();
@@ -177,6 +177,7 @@ export async function mintNFT(params: {
     reserved.signature === undefined ||
     reserved.signature === "" ||
     reserved.price === undefined ||
+    reserved.expiry === undefined ||
     (reserved.price as any)?.price === undefined
   ) {
     console.error("Name is not reserved");
@@ -192,6 +193,8 @@ export async function mintNFT(params: {
     console.error("Signature is undefined");
     return;
   }
+
+  const expiry = UInt32.from(BigInt(reserved.expiry));
 
   console.time("uploaded image");
   const ipfs = await ipfsPromise;
@@ -241,11 +244,13 @@ export async function mintNFT(params: {
   const mintParams: MintParams = {
     name: MinaNFT.stringToField(nft.name!),
     address,
+    owner: sender,
     price: UInt64.from(BigInt(price * 1e9)),
     fee: UInt64.from(BigInt((reserved.price as any)?.price * 1_000_000_000)),
     feeMaster: wallet,
     verificationKey,
     signature,
+    expiry,
     metadataParams: {
       metadata: nft.metadataRoot,
       storage: nft.storage!,
