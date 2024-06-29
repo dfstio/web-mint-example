@@ -32,9 +32,15 @@ export async function sendTransaction(params: {
   signedData: string;
   mintParams: string;
   contractAddress: string;
+  name: string;
 }): Promise<{ isSent: boolean; hash: string }> {
-  const { serializedTransaction, signedData, contractAddress, mintParams } =
-    params;
+  const {
+    serializedTransaction,
+    signedData,
+    contractAddress,
+    mintParams,
+    name,
+  } = params;
   console.log("sendTransaction", {
     serializedTransaction,
     signedData,
@@ -61,7 +67,7 @@ export async function sendTransaction(params: {
     transactions: [transaction],
     task: "mint",
     args,
-    metadata: `mint`,
+    metadata: `mint NFT @${name}`,
     mode: "async",
   });
 
@@ -135,6 +141,8 @@ export async function prepareTransaction(params: SimpleMintNFT): Promise<{
 
 async function zkCloudWorkerRequest(params: any) {
   const { command, task, transactions, args, metadata, mode, jobId } = params;
+  const chain = process.env.NEXT_PUBLIC_CHAIN;
+  if (chain === undefined) throw new Error("Chain is undefined");
   const apiData = {
     auth: process.env.NEXT_PUBLIC_ZKCW_AUTH,
     command: command,
@@ -149,9 +157,9 @@ async function zkCloudWorkerRequest(params: any) {
       mode: mode ?? "sync",
       jobId,
     },
-    chain: `devnet`,
+    chain,
   };
-  const endpoint = process.env.NEXT_PUBLIC_ZKCW_ENDPOINT + "devnet";
+  const endpoint = process.env.NEXT_PUBLIC_ZKCW_ENDPOINT + chain;
 
   const response = await axios.post(endpoint, apiData);
   return response.data;

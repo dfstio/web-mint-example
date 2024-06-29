@@ -140,6 +140,7 @@ export async function simpleMintNFT(params: {
     signedData,
     mintParams,
     contractAddress,
+    name,
   });
   console.timeEnd("sent transaction");
   console.log("Sent transaction", sentTx);
