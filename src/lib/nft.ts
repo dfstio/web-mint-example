@@ -74,6 +74,7 @@ export async function mintNFT(params: {
   });
 
   console.time("imported o1js");
+  /*
   const {
     Field,
     PrivateKey,
@@ -294,4 +295,5 @@ export async function mintNFT(params: {
   });
   console.timeEnd("sent transaction");
   console.log("Sent transaction", sentTx);
+  */
 }
