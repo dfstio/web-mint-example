@@ -220,7 +220,7 @@ export async function mintNFT(params: {
   const zkAppAddress = PublicKey.fromBase58(MINANFT_NAME_SERVICE_V2);
   const zkApp = new NameContractV2(zkAppAddress);
   const fee = Number((await MinaNFT.fee()).toBigInt());
-  const memo = "mint";
+  const memo = `mint NFT @${name}`.substring(0, 30);
   await fetchMinaAccount({ publicKey: sender });
   await fetchMinaAccount({ publicKey: zkAppAddress });
   console.time("prepared commit data");
