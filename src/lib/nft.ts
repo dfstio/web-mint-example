@@ -13,10 +13,11 @@ export async function getAccount(): Promise<string | undefined> {
   let address: string | undefined = undefined;
   if (accounts?.code === undefined && accounts?.length > 0) {
     address = accounts[0];
-    console.log("Address", address);
+    console.log("Address:", address);
   }
   return address;
 }
+
 export interface ProofOfNFT {
   key: string;
   value: string;

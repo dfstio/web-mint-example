@@ -19,7 +19,7 @@ export default function Mint() {
   const [keys, setKeys] = useState<ProofOfNFT[]>([]);
 
   const onDrop = (acceptedFiles: File[]) => {
-    console.log(acceptedFiles);
+    console.log("acceptedFiles", acceptedFiles);
     if (acceptedFiles.length > 0) {
       setImage(acceptedFiles[0]);
       setUrl(URL.createObjectURL(acceptedFiles[0]));
