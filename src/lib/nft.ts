@@ -2,8 +2,8 @@
 
 import { calculateSHA512 } from "./sha512";
 import { pinFile } from "./ipfs";
-import type { blockchain, MintParams } from "minanft";
-import type { VerificationKey } from "o1js";
+//import type { blockchain, MintParams } from "minanft";
+//import type { VerificationKey } from "o1js";
 import { serializeTransaction } from "./transaction";
 import { sendTransaction } from "./send";
 
@@ -59,7 +59,7 @@ export async function mintNFT(params: {
     return;
   }
 
-  const chain: blockchain = "devnet";
+  const chain = "devnet";
 
   const ipfsPromise = pinFile({
     file: image,

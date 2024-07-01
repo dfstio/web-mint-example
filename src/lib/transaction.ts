@@ -1,4 +1,4 @@
-import type { Mina } from "o1js";
+//import type { Mina } from "o1js";
 
 export function serializeTransaction(
   tx: any //Mina.Transaction<false, false>
