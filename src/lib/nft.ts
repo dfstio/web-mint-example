@@ -13,10 +13,11 @@ export async function getAccount(): Promise<string | undefined> {
   let address: string | undefined = undefined;
   if (accounts?.code === undefined && accounts?.length > 0) {
     address = accounts[0];
-    console.log("Address", address);
+    console.log("Address:", address);
   }
   return address;
 }
+
 export interface ProofOfNFT {
   key: string;
   value: string;
@@ -220,7 +221,7 @@ export async function mintNFT(params: {
   const zkAppAddress = PublicKey.fromBase58(MINANFT_NAME_SERVICE_V2);
   const zkApp = new NameContractV2(zkAppAddress);
   const fee = Number((await MinaNFT.fee()).toBigInt());
-  const memo = "mint";
+  const memo = `mint NFT @${name}`.substring(0, 30);
   await fetchMinaAccount({ publicKey: sender });
   await fetchMinaAccount({ publicKey: zkAppAddress });
   console.time("prepared commit data");
